@@ -14,13 +14,6 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 find_package(OpenCV REQUIRED)
 
-#if( OpenCV_FOUND )
-
-#    message( "Found OpenCV" )
-#    message( "Includes: " ${OpenCV_INCLUDE_DIRS} )
-#else()
-#    message( "OpenCV not found, woot" )
-#endif( OpenCV_FOUND )
 
 include_directories(include ${OpenCV_INCLUDE_DIRS})
 
@@ -39,7 +32,7 @@ add_executable(vedio_publisher src/vedio_publisher.cpp)
 target_link_libraries(vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(Image_folder_publisher src/Image_folder_publisher.cpp)
-target_link_libraries(Image_folder_publisher opencv_imgcodecs ${catkin_LIBRARIES} ${OpenCV_INCLUDE_DIRS} ${DLib_INCLUDE_DIRS})
+target_link_libraries(Image_folder_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${DLib_LIBRARIES})
 
 add_executable(Image_folder_subscriber src/Image_folder_subscriber.cpp)
 target_link_libraries(Image_folder_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
