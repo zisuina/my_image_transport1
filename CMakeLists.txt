@@ -7,16 +7,17 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+set(DLib_DIR "/usr/local/lib/cmake/DLib/")
 find_package(catkin REQUIRED COMPONENTS DLib roscpp rosbag rospy std_msgs genmsg cv_bridge image_transport)
 
 catkin_package()
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3 REQUIRED)
 
 
 include_directories(include ${OpenCV_INCLUDE_DIRS})
-
+message(STATUS "${OpenCV_INCLUDE_DIRS}")
 ##Dutils
 #find_package(DLib)
 #include_directories(include ${DLib_INCLUDE_DIRS})
@@ -31,16 +32,17 @@ target_link_libraries(my_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 add_executable(vedio_publisher src/vedio_publisher.cpp)
 target_link_libraries(vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
+message("catkin_LIBRARIES = ${catkin_LIBRARIES}")
 add_executable(Image_folder_publisher src/Image_folder_publisher.cpp)
-target_link_libraries(Image_folder_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${DLib_LIBRARIES})
+target_link_libraries(Image_folder_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(Image_folder_subscriber src/Image_folder_subscriber.cpp)
 target_link_libraries(Image_folder_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(ReadBag src/ReadBag.cpp)
 target_link_libraries(ReadBag ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${rosbag_LIBRARIES}  )
-## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+# System dependencies are found with CMake's conventions
+ find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures

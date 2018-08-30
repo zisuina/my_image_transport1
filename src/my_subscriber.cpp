@@ -22,7 +22,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 int main(int argc, char **argv)
 {
-    cout<< "i am ready"<< endl;
+    cout<< "Image_listener is ready"<< endl;
     ros::init(argc, argv, "image_listener");
     ros::NodeHandle nh;
     cv::namedWindow("view");
@@ -32,5 +32,5 @@ int main(int argc, char **argv)
 //    cout<< iamge.rows << endl;
     ros::spin();
     cv::destroyWindow("view");
-    ros::shutdown();
+//    ros::shutdown();
 }
