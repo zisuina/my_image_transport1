@@ -79,32 +79,12 @@ bool kbhit()
 }
 
 
-//char stop_by_blank()
-//{
-//
-//    if( kbhit() ) {
-//        char ch;
-//        scanf("%c", &ch);
-//        switch (ch) {
-//            case 32:
-//                cout << "Stop publishing successfully!" << endl;
-//                return cc;
-//        }
-//    }
-//}
-
 int main(int argc, char **argv)
 {
 //    /media/hitcm/9359-D81D/loop_close_data_office_v0/image
+//    /home/hitcm/Downloads/loop_close_data_office_v0/image
 
-//    tmp();
-//    std::thread t1(task1, "Hello");
-//    t1.join();
-
-
-
-
-    const int frequency =  50;
+    const int frequency =  20;
     const double dt = 1/float(frequency);
     int num_start;
     int num_image;
@@ -165,7 +145,7 @@ int main(int argc, char **argv)
                         case 32:
                             cout << endl;
                             cout << "Stop publishing successfully!" << endl;
-                            cout << "press enter key to continue." << endl;
+                            cout << "Press enter key to continue." << endl;
                             char ss;
                             while (1)
                             {
@@ -203,27 +183,13 @@ int main(int argc, char **argv)
                 sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
                 if (!image.empty())
                 {
-
-//                    cout<<"image.data"<<image.data<<endl;
-//                    if(!image.data )                              // Check for invalid input
-//                    {
-//                        cout <<  "Could not open or find the image" << std::endl ;
-//
-//                    }else
-//                    {
-////                        namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
-
-
-//                    }
                     msg->header.stamp = time;
                     pub.publish(msg);
                     counter++;
                     cout<< "rows: "<<image.rows << endl;
-//                    ros::spinOnce();
+                    ros::spinOnce();
                     ros::Time time2 = ros::Time::now();
                     process_runtime = time2.toSec() - pre_time.toSec() ;
-
-                          // Show our image inside it.
 
                 } else
                 {
@@ -232,16 +198,12 @@ int main(int argc, char **argv)
                 }
                 i=i+1;
 
-//                int key = waitKey(1000);
-//                cout << "key received: " << key << endl;
-
             }
 
         }else throw std::out_of_range ("Out of range of file size");
 
     }
     else throw std::out_of_range ("Out of range of file size");
-    ros::spin();
 
     return 0;
 }

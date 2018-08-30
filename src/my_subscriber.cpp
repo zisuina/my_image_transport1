@@ -4,13 +4,14 @@
 #include <cv_bridge/cv_bridge.h>
 using namespace std;
 using namespace cv;
+
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
     cout << "Time: "<<  msg->header.stamp.toSec()  <<endl;
     try
     {
-        cout<< msg << endl;
+//        cout<< count << endl;
         cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image);
     }
     catch (cv_bridge::Exception& e)
@@ -28,6 +29,7 @@ int main(int argc, char **argv)
     cv::namedWindow("view");
     cv::startWindowThread();
     image_transport::ImageTransport it(nh);
+    cout<< "To get message. "<< endl;
     image_transport::Subscriber sub = it.subscribe("camera/image", 1, &imageCallback);
 //    cout<< iamge.rows << endl;
     ros::spin();
