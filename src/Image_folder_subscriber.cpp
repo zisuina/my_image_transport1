@@ -28,12 +28,12 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "image_folder_listener");
     cout<< "image_folder_listener is ready"<< endl;
     ros::NodeHandle nh;
-    cv::namedWindow("view");
+    cv::namedWindow("image_folder_listener");
     cv::startWindowThread();
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber sub = it.subscribe("camera/image", 1, &imageCallback);
 //    cout<< iamge.rows << endl;
     ros::spin();
-    cv::destroyWindow("view");
-    ros::shutdown();
+    cv::destroyWindow("image_folder_listener");
+//    ros::shutdown();
 }

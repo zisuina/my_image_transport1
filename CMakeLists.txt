@@ -7,11 +7,13 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+#set(OpenCV_DIR "/usr/local/opencv2/share/OpenCV/")
 set(DLib_DIR "/usr/local/lib/cmake/DLib/")
 find_package(catkin REQUIRED COMPONENTS DLib roscpp rosbag rospy std_msgs genmsg cv_bridge image_transport)
 
 catkin_package()
 include_directories(include ${catkin_INCLUDE_DIRS})
+
 
 find_package(OpenCV 3 REQUIRED)
 
@@ -31,6 +33,9 @@ target_link_libraries(my_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 add_executable(vedio_publisher src/vedio_publisher.cpp)
 target_link_libraries(vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(Vedio_publisher src/Vedio_publisher.cpp)
+target_link_libraries(Vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 message("catkin_LIBRARIES = ${catkin_LIBRARIES}")
 add_executable(Image_folder_publisher src/Image_folder_publisher.cpp)

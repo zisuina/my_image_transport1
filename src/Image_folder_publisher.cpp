@@ -11,10 +11,6 @@
 #include <DUtils/DUtils.h>
 #include <DUtilsCV/DUtilsCV.h>
 #include <DVision/DVision.h>
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
 
 #include <iostream>   // std::cout
 #include <string>
@@ -24,12 +20,6 @@
 //#define NAME "view"
 
 
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
-
-
 #include <stdio.h>
 #include <linux/input.h>
 #include <stdlib.h>
@@ -37,28 +27,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <stdio.h>
-#include <termios.h>
-#include <thread>
-
 #include <sys/ioctl.h>
 #include <termios.h>
 
 
-
-
 using namespace std;
 using namespace cv;
-
-
-const int nMaxSlider = 100;
-int nAlphaSlider;
-
-double dAlphaVaule;
-double dBetaValue;
-
-
-
 
 
 bool kbhit()
@@ -159,9 +133,6 @@ int main(int argc, char **argv)
                                 }
 
                             }
-
-
-
                     }
                 }
 
@@ -204,6 +175,7 @@ int main(int argc, char **argv)
 
     }
     else throw std::out_of_range ("Out of range of file size");
+
 
     return 0;
 }

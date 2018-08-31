@@ -8,11 +8,12 @@ using namespace cv;
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
-    cout << "Time: "<<  msg->header.stamp.toSec()  <<endl;
     try
     {
-//        cout<< count << endl;
+
         cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image);
+        cout << "Time: "<<  msg->header.stamp.toSec()  <<endl;
+//        cout<< image.rows << endl;
     }
     catch (cv_bridge::Exception& e)
     {
@@ -31,7 +32,6 @@ int main(int argc, char **argv)
     image_transport::ImageTransport it(nh);
     cout<< "To get message. "<< endl;
     image_transport::Subscriber sub = it.subscribe("camera/image", 1, &imageCallback);
-//    cout<< iamge.rows << endl;
     ros::spin();
     cv::destroyWindow("view");
 //    ros::shutdown();
