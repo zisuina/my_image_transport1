@@ -56,7 +56,8 @@
 
   <!--<build_export_depend>cv_bridge</build_export_depend>-->
   <build_export_depend>image_transport</build_export_depend>
-
+  <!--<depend package="tf"/>-->
+  <!--<depend package="nav_msgs"/>-->
   <!--<exec_depend>opencv2</exec_depend>-->
   <!--<exec_depend>cv_bridge</exec_depend>-->
   <!--<exec_depend>image_transport</exec_depend>-->

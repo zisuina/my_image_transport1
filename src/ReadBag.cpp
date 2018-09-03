@@ -1,123 +1,230 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <rosbag/bag_player.h>
+//#include <rosbag/storage.h>
+#include <rosbag/player.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/String.h>
-
+#include <nav_msgs/Odometry.h>
+#include <tf/transform_broadcaster.h>
 #include <boost/foreach.hpp>
-#define foreach BOOST_FOREACH
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <sensor_msgs/LaserScan.h>
+#include "boost/program_options.hpp"
 
-int main() {
 
+using namespace std;
+namespace po = boost::program_options;
 
-    rosbag::Bag bag;
-    bag.open("/home/hitcm/Downloads/loop_close_data_office_v0/2018-05-22-01-25-50_DT.bag", rosbag::bagmode::Read);
+rosbag::PlayerOptions parseOptions(int argc, char** argv) {
+    rosbag::PlayerOptions opts;
 
-    std::vector<std::string> topics;
-    topics.push_back(std::string("chatter"));
-    topics.push_back(std::string("numbers"));
+    po::options_description desc("Allowed options");
 
-    rosbag::View view(bag, rosbag::TopicQuery(topics));
+    desc.add_options()
+            ("help,h", "produce help message")
+            ("prefix,p", po::value<std::string>()->default_value(""), "prefixes all output topics in replay")
+            ("quiet,q", "suppress console output")
+            ("immediate,i", "play back all messages without waiting")
+            ("pause", "start in paused mode")
+            ("queue", po::value<int>()->default_value(100), "use an outgoing queue of size SIZE")
+            ("clock", "publish the clock time")
+            ("hz", po::value<float>()->default_value(100.0f), "use a frequency of HZ when publishing clock time")
+            ("delay,d", po::value<float>()->default_value(0.2f), "sleep SEC seconds after every advertise call (to allow subscribers to connect)")
+            ("rate,r", po::value<float>()->default_value(1.0f), "multiply the publish rate by FACTOR")
+            ("start,s", po::value<float>()->default_value(0.0f), "start SEC seconds into the bag files")
+            ("duration,u", po::value<float>(), "play only SEC seconds from the bag files")
+            ("skip-empty", po::value<float>(), "skip regions in the bag with no messages for more than SEC seconds")
+            ("loop,l", "loop playback")
+            ("keep-alive,k", "keep alive past end of bag (useful for publishing latched topics)")
+            ("try-future-version", "still try to open a bag file, even if the version is not known to the player")
+            ("topics", po::value< std::vector<std::string> >()->multitoken(), "topics to play back")
+            ("pause-topics", po::value< std::vector<std::string> >()->multitoken(), "topics to pause playback on")
+            ("bags", po::value< std::vector<std::string> >(), "bag files to play back from");
 
-    foreach(rosbag::MessageInstance const m, view)
+    po::positional_options_description p;
+    p.add("bags", -1);
+
+    po::variables_map vm;
+
+    try
     {
-        std_msgs::String::ConstPtr s = m.instantiate<std_msgs::String>();
-        if (s != NULL)
-            std::cout << s->data << std::endl;
-
-        std_msgs::Int32::ConstPtr i = m.instantiate<std_msgs::Int32>();
-        if (i != NULL)
-            std::cout << i->data << std::endl;
+        po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+    } catch (boost::program_options::invalid_command_line_syntax& e)
+    {
+        throw ros::Exception(e.what());
+    }  catch (boost::program_options::unknown_option& e)
+    {
+        throw ros::Exception(e.what());
     }
 
-    bag.close();
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;
+        exit(0);
+    }
+
+    if (vm.count("prefix"))
+        opts.prefix = vm["prefix"].as<std::string>();
+    if (vm.count("quiet"))
+        opts.quiet = true;
+    if (vm.count("immediate"))
+        opts.at_once = true;
+    if (vm.count("pause"))
+        opts.start_paused = true;
+    if (vm.count("queue"))
+        opts.queue_size = vm["queue"].as<int>();
+    if (vm.count("hz"))
+        opts.bag_time_frequency = vm["hz"].as<float>();
+    if (vm.count("clock"))
+        opts.bag_time = true;
+    if (vm.count("delay"))
+        opts.advertise_sleep = ros::WallDuration(vm["delay"].as<float>());
+    if (vm.count("rate"))
+        opts.time_scale = vm["rate"].as<float>();
+    if (vm.count("start"))
+    {
+        opts.time = vm["start"].as<float>();
+        opts.has_time = true;
+    }
+    if (vm.count("duration"))
+    {
+        opts.duration = vm["duration"].as<float>();
+        opts.has_duration = true;
+    }
+    if (vm.count("skip-empty"))
+        opts.skip_empty = ros::Duration(vm["skip-empty"].as<float>());
+    if (vm.count("loop"))
+        opts.loop = true;
+    if (vm.count("keep-alive"))
+        opts.keep_alive = true;
+
+    if (vm.count("topics"))
+    {
+        std::vector<std::string> topics = vm["topics"].as< std::vector<std::string> >();
+        for (std::vector<std::string>::iterator i = topics.begin();
+             i != topics.end();
+             i++)
+            opts.topics.push_back(*i);
+    }
+
+    if (vm.count("pause-topics"))
+    {
+        std::vector<std::string> pause_topics = vm["pause-topics"].as< std::vector<std::string> >();
+        for (std::vector<std::string>::iterator i = pause_topics.begin();
+             i != pause_topics.end();
+             i++)
+            opts.pause_topics.push_back(*i);
+    }
+
+    if (vm.count("bags"))
+    {
+        std::vector<std::string> bags = vm["bags"].as< std::vector<std::string> >();
+        for (std::vector<std::string>::iterator i = bags.begin();
+             i != bags.end();
+             i++)
+            opts.bags.push_back(*i);
+    } else {
+        if (vm.count("topics") || vm.count("pause-topics"))
+            throw ros::Exception("When using --topics or --pause-topics, --bags "
+                                 "should be specified to list bags.");
+        throw ros::Exception("You must specify at least one bag to play back.");
+    }
+
+    return opts;
+}
+
+#define foreach BOOST_FOREACH
+
+
+
+bool kbhit()
+{
+    termios term;
+    tcgetattr(0, &term);
+
+    termios term2 = term;
+    term2.c_lflag &= ~ICANON;
+    tcsetattr(0, TCSANOW, &term2);
+
+    int byteswaiting;
+    ioctl(0, FIONREAD, &byteswaiting);
+
+    tcsetattr(0, TCSANOW, &term);
+
+    return byteswaiting > 0;
+}
+
+void stop()
+{
+
+    if( kbhit() ) {
+        char ch;
+        scanf("%c", &ch);
+        switch (ch) {
+            case 32:
+                cout << endl;
+                cout << "Stop publishing successfully!" << endl;
+                cout << "Press enter key to continue." << endl;
+                char ss;
+                while (1)
+                {
+                    if(kbhit())
+                    {
+                        scanf("%c", &ss);
+                        if(ss == 32)
+                        {
+                            break;
+                        }
+                    }
+
+                }
+        }
+    }
+
 
 }
-//#include "ros/ros.h"
-//#include "std_msgs/String.h"
-//#include <cv_bridge/cv_bridge.h>
-//#include <sensor_msgs/image_encodings.h>
-//#include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/highgui/highgui.hpp>
-///**
-// * This tutorial demonstrates simple receipt of messages over the ROS system.
-// */
-//
-//void chatterCallback(const std_msgs::String::ConstPtr& msg)
-//{
-//    ROS_INFO("I heard: [%s]", msg->data.c_str());
-//}
+//const sensor_msgs::ImageConstPtr& msg
 
-//int main(int argc, char **argv)
-//{
-//    /**
-//     * The ros::init() function needs to see argc and argv so that it can perform
-//     * any ROS arguments and name remapping that were provided at the command line.
-//     * For programmatic remappings you can use a different version of init() which takes
-//     * remappings directly, but for most command-line programs, passing argc and argv is
-//     * the easiest way to do it.  The third argument to init() is the name of the node.
-//     *
-//     * You must call one of the versions of ros::init() before using any other
-//     * part of the ROS system.
-//     */
-//    ros::init(argc, argv, "bag_listener");
-//
-//    /**
-//     * NodeHandle is the main access point to communications with the ROS system.
-//     * The first NodeHandle constructed will fully initialize this node, and the last
-//     * NodeHandle destructed will close down the node.
-//     */
-//    ros::NodeHandle n;
-//
-//    /**
-//     * The subscribe() call is how you tell ROS that you want to receive messages
-//     * on a given topic.  This invokes a call to the ROS
-//     * master node, which keeps a registry of who is publishing and who
-//     * is subscribing.  Messages are passed to a callback function, here
-//     * called chatterCallback.  subscribe() returns a Subscriber object that you
-//     * must hold on to until you want to unsubscribe.  When all copies of the Subscriber
-//     * object go out of scope, this callback will automatically be unsubscribed from
-//     * this topic.
-//     *
-//     * The second parameter to the subscribe() function is the size of the message
-//     * queue.  If messages are arriving faster than they are being processed, this
-//     * is the number of messages that will be buffered up before beginning to throw
-//     * away the oldest ones.
-//     */
-//    ros::Subscriber sub = n.subscribe("sensor_msgs/LaserScan", 1000, chatterCallback);
-//
-//    /**
-//     * ros::spin() will enter a loop, pumping callbacks.  With this version, all
-//     * callbacks will be called from within this thread (the main one).  ros::spin()
-//     * will exit when Ctrl-C is pressed, or the node is shutdown by the master.
-//     */
-//    ros::spin();
-//
-//    return 0;
-//}
+int main(int argc, char** argv) {
 
-//
-//#include <ros/ros.h>
-//#include <image_transport/image_transport.h>
-//#include <opencv2/highgui/highgui.hpp>
-//#include <cv_bridge/cv_bridge.h>
-//using namespace std;
-//using namespace cv;
-//void imageCallback(const std_msgs::String::ConstPtr& msg)
-//{
-//
-//    ROS_INFO("I heard: [%s]", msg->data.c_str());
-//}
-//
-//int main(int argc, char **argv)
-//{
-//    cout<< "i am ready"<< endl;
-//    ros::init(argc, argv, "image_listener");
-//    ros::NodeHandle nh;
-//    ros::Subscriber sub = nh.subscribe("sensor_msgs/LaserScan", 100, imageCallback);
-////    cout<< iamge.rows << endl;
-//    ros::spin();
-//    ros::shutdown();
-//}
-////
-//// Created by hitcm on 18-8-23.
-////
+    const int frequency = 20;
+    const double dt = 1 / float(frequency);
+    int num_start;
+    int num_pub_msg;
+    double process_runtime = 0.0;
+    unsigned int end_place;
+
+    ros::init(argc, argv, "rosbag_publisher");
+    ros::NodeHandle n;
+    ros::Publisher odom_pub = n.advertise<nav_msgs::Odometry>("/odom", 50);
+
+    //Read bag from argv
+    rosbag::Bag bag;
+    bag.open(argv[1], rosbag::bagmode::Read);
+    rosbag::View view(bag);
+
+    ros::init(argc, argv, "play", ros::init_options::AnonymousName);
+    rosbag::PlayerOptions opts;
+    try {
+        opts = parseOptions(argc, argv);
+    }
+    catch (ros::Exception const &ex) {
+        ROS_ERROR("Error reading options: %s", ex.what());
+        return 1;
+    }
+
+
+    rosbag::Player player(opts);
+
+    try {
+        player.publish();
+    }
+    catch (std::runtime_error &e) {
+        ROS_FATAL("%s", e.what());
+        return 1;
+    }
+
+    return 0;
+}

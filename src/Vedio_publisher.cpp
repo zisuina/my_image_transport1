@@ -11,9 +11,34 @@ using namespace cv;
 
 int main(int argc, char** argv)
 {
-    const int frequency =  20;
+    const int frequency =  100;
     const double dt = 1/float(frequency);
     double process_runtime = 0.0;
+    int num_start;
+    int num_image;
+    unsigned int end_place;
+
+    if (argc == 4)
+    {
+        num_start =  atoi(argv[2]);
+        num_image =  atoi(argv[3]);
+    }
+    if(argc == 3)
+    {
+        cout<<"Will publish all left video. "<<endl;
+        num_start =  atoi(argv[2]);
+        num_image = INT_MAX ;
+    }
+    if(argc == 2)
+    {
+        cout<<"Will publish this video. "<<endl;
+        num_start = 0;
+        num_image = INT_MAX ;
+    }
+
+    cout <<"The place you want to start publishing: "<< num_start <<endl;
+    cout << "The place you want to stop publishing: " << num_image <<endl;
+
 
     ros::init(argc, argv, "video_publisher");
     ros::NodeHandle nh;
@@ -35,8 +60,34 @@ int main(int argc, char** argv)
     ros::Time pre_time = ros::Time::now();
     double diff;
     double real_dt = dt-process_runtime;
-    cap>>frame;
-    while(nh.ok() && !frame.empty()) {
+
+
+    int i = num_start;
+    int frame_size = cap.get(CV_CAP_PROP_FRAME_COUNT);
+    cout<< "num_start: "<<num_start<<endl;
+
+
+    cout<< "Total frame size: "<<cap.get(CV_CAP_PROP_FRAME_COUNT)<<endl;
+    cap.set(CV_CAP_PROP_POS_FRAMES, num_start);
+//    if(frame.empty())
+//
+//    {
+//        cout<< "why "<<endl;
+//    }
+//    imshow("Live", frame);
+    end_place = num_start+num_image;
+    while(nh.ok() && i <= end_place) {
+
+//        while(i < num_start)
+//        {
+//            cap>>frame;
+//            i=i+1;
+//            if(frame.empty())
+//            {
+//                throw std::out_of_range ("Out of range of this video!");
+//            }
+////            cout<< "ID: "<<i<<endl;
+//        }
 
         ros::Time time = ros::Time::now();
         diff = time.toSec() - pre_time.toSec() ;
@@ -44,25 +95,33 @@ int main(int argc, char** argv)
         {
             continue;
         }
-        pre_time = time;
-        cap>>frame;
-        imshow("Live", frame);
-        sensor_msgs::ImagePtr frame_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
-        frame_msg->header.stamp = time;
-        pub.publish(frame_msg);
-        ros::spinOnce();
-        ros::Time time2 = ros::Time::now();
-        process_runtime = time2.toSec() - pre_time.toSec() ;
-        char c = cv::waitKey(1);
-        while (32 == c)
+        cout<< "ID: "<<i<<endl;
+        cap.read(frame);
+        if(!frame.empty())
         {
-            char s = cv::waitKey(1);
-            if(s==32)
-                 break;
+            pre_time = time;
+            imshow("Live", frame);
+            sensor_msgs::ImagePtr frame_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", frame).toImageMsg();
+            frame_msg->header.stamp = time;
+            pub.publish(frame_msg);
+            i=i+1;
+            cout<<"the ID of image: "<<i<<endl;
+            ros::spinOnce();
+            ros::Time time2 = ros::Time::now();
+            process_runtime = time2.toSec() - pre_time.toSec() ;
+            char c = cv::waitKey(1);
+            while (32 == c)
+            {
+                char s = cv::waitKey(1);
+                if(s==32)
+                    break;
+            }
+
         }
-
-
-
+        else
+        {
+            throw std::out_of_range ("Out of range of this video!");
+        }
 
 
 
