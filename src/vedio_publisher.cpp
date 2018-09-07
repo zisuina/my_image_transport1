@@ -12,7 +12,6 @@ int main(int argc, char** argv)
     image_transport::Publisher pub = it.advertise("camera/image", 1);
 
     cv::VideoCapture cap(0);
-
     cv::Mat frame;
     sensor_msgs::ImagePtr frame_msg;
     ros::Rate loop_rate(5);

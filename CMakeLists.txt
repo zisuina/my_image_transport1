@@ -25,8 +25,8 @@ message(STATUS "${OpenCV_INCLUDE_DIRS}")
 #include_directories(include ${DLib_INCLUDE_DIRS})
 
 
-add_executable(my_publisher src/my_publisher.cpp)
-target_link_libraries(my_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
+#add_executable(my_publisher src/my_publisher.cpp src/PubOperations.cpp)
+#target_link_libraries(my_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(my_subscriber src/my_subscriber.cpp)
 target_link_libraries(my_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBS})
@@ -34,20 +34,23 @@ target_link_libraries(my_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBS})
 add_executable(vedio_publisher src/vedio_publisher.cpp)
 target_link_libraries(vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(Vedio_publisher src/Vedio_publisher.cpp)
+add_executable(Vedio_publisher src/Vedio_publisher.cpp src/PubOperations.cpp)
 target_link_libraries(Vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 message("catkin_LIBRARIES = ${catkin_LIBRARIES}")
-add_executable(Image_folder_publisher src/Image_folder_publisher.cpp)
+add_executable(Image_folder_publisher src/Image_folder_publisher.cpp src/PubOperations.cpp)
 target_link_libraries(Image_folder_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(Image_folder_subscriber src/Image_folder_subscriber.cpp)
+add_executable(Image_folder_subscriber src/Image_folder_subscriber.cpp )
 target_link_libraries(Image_folder_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(ReadBag src/ReadBag.cpp)
 target_link_libraries(ReadBag ${catkin_LIBRARIES} ${OpenCV_LIBS} ${rosbag_LIBRARIES}  )
 # System dependencies are found with CMake's conventions
- find_package(Boost REQUIRED COMPONENTS system)
+#add_executable(my_publisher src/my_publisher.cpp)
+#target_link_libraries(my_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures

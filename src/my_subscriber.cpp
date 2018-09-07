@@ -4,7 +4,7 @@
 #include <cv_bridge/cv_bridge.h>
 using namespace std;
 using namespace cv;
-
+int counter=0;
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
 
@@ -12,8 +12,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     {
 
         cv::imshow("view", cv_bridge::toCvShare(msg, "bgr8")->image);
-        cout << "Time: "<<  msg->header.stamp.toSec()  <<endl;
-//        cout<< image.rows << endl;
+        counter++;
+        cout << "Subscribed ID: "<<  counter  <<endl;
     }
     catch (cv_bridge::Exception& e)
     {
@@ -22,8 +22,7 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     cv::waitKey(1);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv)  {
     cout<< "Image_listener is ready"<< endl;
     ros::init(argc, argv, "image_listener");
     ros::NodeHandle nh;

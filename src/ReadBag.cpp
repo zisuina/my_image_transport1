@@ -1,7 +1,6 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <rosbag/bag_player.h>
-//#include <rosbag/storage.h>
 #include <rosbag/player.h>
 #include <std_msgs/Int32.h>
 #include <std_msgs/String.h>
@@ -135,66 +134,10 @@ rosbag::PlayerOptions parseOptions(int argc, char** argv) {
     return opts;
 }
 
-#define foreach BOOST_FOREACH
 
-
-
-bool kbhit()
-{
-    termios term;
-    tcgetattr(0, &term);
-
-    termios term2 = term;
-    term2.c_lflag &= ~ICANON;
-    tcsetattr(0, TCSANOW, &term2);
-
-    int byteswaiting;
-    ioctl(0, FIONREAD, &byteswaiting);
-
-    tcsetattr(0, TCSANOW, &term);
-
-    return byteswaiting > 0;
-}
-
-void stop()
-{
-
-    if( kbhit() ) {
-        char ch;
-        scanf("%c", &ch);
-        switch (ch) {
-            case 32:
-                cout << endl;
-                cout << "Stop publishing successfully!" << endl;
-                cout << "Press enter key to continue." << endl;
-                char ss;
-                while (1)
-                {
-                    if(kbhit())
-                    {
-                        scanf("%c", &ss);
-                        if(ss == 32)
-                        {
-                            break;
-                        }
-                    }
-
-                }
-        }
-    }
-
-
-}
-//const sensor_msgs::ImageConstPtr& msg
 
 int main(int argc, char** argv) {
 
-    const int frequency = 20;
-    const double dt = 1 / float(frequency);
-    int num_start;
-    int num_pub_msg;
-    double process_runtime = 0.0;
-    unsigned int end_place;
 
     ros::init(argc, argv, "rosbag_publisher");
     ros::NodeHandle n;
