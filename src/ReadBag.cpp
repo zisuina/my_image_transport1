@@ -14,6 +14,10 @@
 #include "boost/program_options.hpp"
 
 
+//directory
+#include <DUtils/DUtils.h>
+#include <DUtilsCV/DUtilsCV.h>
+#include <DVision/DVision.h>
 using namespace std;
 namespace po = boost::program_options;
 

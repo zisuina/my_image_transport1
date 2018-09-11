@@ -154,8 +154,8 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
 
     int delay = 1000/rate;
 
-    if (vm.count("prefix"))
-        opts.prefix = vm["prefix"].as<std::string>();
+//    if (vm.count("prefix"))
+//        opts.prefix = vm["prefix"].as<std::string>();
     if (vm.count("quiet"))
         opts.quiet = true;
     if (vm.count("immediate"))

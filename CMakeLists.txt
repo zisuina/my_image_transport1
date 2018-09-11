@@ -38,7 +38,7 @@ add_executable(Vedio_publisher src/Vedio_publisher.cpp src/PubOperations.cpp)
 target_link_libraries(Vedio_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 message("catkin_LIBRARIES = ${catkin_LIBRARIES}")
-add_executable(Image_folder_publisher src/Image_folder_publisher.cpp src/PubOperations.cpp)
+add_executable(Image_folder_publisher src/Image_folder_publisher.cpp src/PubOperations.cpp src/params.cpp)
 target_link_libraries(Image_folder_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(Image_folder_subscriber src/Image_folder_subscriber.cpp )
@@ -47,8 +47,8 @@ target_link_libraries(Image_folder_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBS}
 add_executable(ReadBag src/ReadBag.cpp)
 target_link_libraries(ReadBag ${catkin_LIBRARIES} ${OpenCV_LIBS} ${rosbag_LIBRARIES}  )
 # System dependencies are found with CMake's conventions
-#add_executable(my_publisher src/my_publisher.cpp)
-#target_link_libraries(my_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
+add_executable(ReadGPS src/ReadGPS.cpp src/params.cpp src/PubOperations.cpp )
+target_link_libraries(ReadGPS ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 find_package(Boost REQUIRED COMPONENTS system)
 

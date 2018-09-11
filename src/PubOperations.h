@@ -19,12 +19,13 @@ namespace datatrans {
         PubOptions();
 
         void check();
-        std::string prefix;
+        void printPubInfo();
         std::string figure_type;
         bool quiet;
         bool start_paused;
         bool at_once;
         double pub_frequency;
+        bool has_pub_frequency;
         ros::Duration total_duration;
         int queue_size;
         ros::WallDuration advertise_sleep;
@@ -45,6 +46,7 @@ namespace datatrans {
 
         std::vector <std::string> topics;
         std::vector <std::string> pause_topics;
+
     };
 
 };// namespace datatrans

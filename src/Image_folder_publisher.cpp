@@ -25,18 +25,19 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include "PubOperations.h"
+#include "Image_folder_publisher.h"
 #include "boost/program_options.hpp"
 #include <rosbag/player.h>
-
+#include "params.h"
 using namespace std;
 using namespace cv;
 
-using namespace std;
+
 namespace po = boost::program_options;
 vector<string> files;
-const string Figure_Type=".jpg";
-
+const string Figure_Type=".png";
 //TODO   Figure_Type
+
 
 datatrans::PubOptions parseOptions(int argc, char** argv) {
 
@@ -54,7 +55,7 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
             ("clock", "publish the clock time")
             ("hz", po::value<float>()->default_value(100.0f), "use a frequency of HZ when publishing clock time")
             ("delay,d", po::value<float>()->default_value(0.2f), "sleep SEC seconds after every advertise call (to allow subscribers to connect)")
-            ("rate,r", po::value<float>()->default_value(20.0f), "multiply the publish rate by FACTOR")
+            ("rate,r", po::value<float>()->default_value(100.0f), "multiply the publish rate by FACTOR")
             ("start,s", po::value<float>()->default_value(0.0f), "start SEC seconds into the bag files")
             ("duration,u", po::value<float>(), "play only SEC seconds from the bag files")
             ("skip-empty", po::value<float>(), "skip regions in the bag with no messages for more than SEC seconds")
@@ -88,9 +89,9 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
         exit(0);
     }
 
-
-    if (vm.count("prefix"))
-        opts.prefix = vm["prefix"].as<std::string>();
+    opts.has_pub_frequency= false;
+//    if (vm.count("prefix"))
+//        opts.prefix = vm["prefix"].as<std::string>();
     if (vm.count("quiet"))
         opts.quiet = true;
     if (vm.count("immediate"))
@@ -143,9 +144,12 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
     }
 
     const string figdir = opts.figure_type;
-    files = DUtils::FileFunctions::Dir(argv[1], Figure_Type.c_str(), true);
+    const char * c = IMAGE_PATH.c_str();
 
-    string dir =argv[1];
+    const string dir = IMAGE_PATH;
+    files = DUtils::FileFunctions::Dir(c, Figure_Type.c_str(), true);
+
+
     ros::Duration real_duration;
     opts.num_pub_frames = files.size();
     if(files.size()>=0)
@@ -164,16 +168,32 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
         ros::Time end_times = ros::Time(time_e);
         real_duration = end_times- start_times ;
         opts.total_duration = real_duration;
-        cout<<"total duration"<<opts.total_duration.toSec()<<endl;
+        cout<<"total duration "<<opts.total_duration.toSec()<<endl;
 
     }
     opts.frames_num = files.size();
+
+    const int frequency =  opts.pub_frequency;
+    if (opts.has_time)
+    {
+        opts.start_frame_id =int(opts.time/(1/float(frequency)) ) ;
+    } else{
+        opts.start_frame_id = 0;
+    }
+
+    if (opts.has_duration)
+    {
+        opts.num_pub_frames = int(opts.pub_duration / (1/float(frequency)));
+    } else{
+        opts.num_pub_frames  = opts.frames_num - opts.start_frame_id;
+        opts.pub_duration = opts.num_pub_frames /frequency;
+    }
     return opts;
 }
 
 
-bool kbhit()
-{
+
+bool PublishIamge::kbhit() {
     termios term;
     tcgetattr(0, &term);
 
@@ -189,9 +209,8 @@ bool kbhit()
     return byteswaiting > 0;
 }
 
-void stop()
-{
-    if( kbhit() ) {
+void PublishIamge::stop() {
+    if (kbhit()) {
         char ch;
         scanf("%c", &ch);
         switch (ch) {
@@ -200,13 +219,10 @@ void stop()
                 cout << "Stop publishing successfully!" << endl;
                 cout << "Press enter key to continue." << endl;
                 char ss;
-                while (1)
-                {
-                    if(kbhit())
-                    {
+                while (1) {
+                    if (kbhit()) {
                         scanf("%c", &ss);
-                        if(ss == 32)
-                        {
+                        if (ss == 32) {
                             break;
                         }
                     }
@@ -218,89 +234,43 @@ void stop()
 }
 
 
-void printPubInfo(datatrans::PubOptions opts)
-{
-    cout<< "The number of figure in this folder:  "<< files.size() << endl;
-    cout << "The publish frequency hz: " << opts.pub_frequency << " times/sec " <<endl;
-    cout << "The publish duration: " << int(opts.pub_duration) << " s " <<endl;
-    cout << "The place you want to start publishing: "<< int(opts.time)<< " s " <<endl;
-    if(opts.loop )
-    {
-        cout << "Will loop your publish: "<<endl;
-    } else{
-        cout << "Only loop once! "<<endl;
-    }
-    cout<<"Image Type: "<<opts.figure_type.c_str()<<endl;
-
-//    cout << "The number of frames you want to publish: " << num_image << " frames" <<endl;
-
-
-}
-
-
-int main(int argc, char **argv)
-{
-//    /media/hitcm/9359-D81D/loop_close_data_office_v0/image
-//    /home/hitcm/Downloads/loop_close_data_office_v0/image
-
-    datatrans::PubOptions opts;
-    opts = parseOptions(argc, argv);
-
-    const int frequency =  opts.pub_frequency;
-    const double dt = 1/float(frequency);
-    int num_start, num_image;
-    if (opts.has_time)
-    {
-        num_start =int(opts.time/dt ) ;
-    } else{
-        num_start = 0;
-    }
-
-    if (opts.has_duration)
-    {
-        num_image = int(opts.pub_duration / dt);
-    } else{
-        num_image = opts.frames_num - opts.start_frame_id;
-        opts.pub_duration = num_image/frequency;
-    }
+void PublishIamge::pubImage(datatrans::PubOptions opts, int argc, char **argv) {
+    const double dt = 1 / float(opts.pub_frequency);
+    int num_start = opts.start_frame_id;
+    int num_image = opts.num_pub_frames;
 
     opts.check();
+    opts.printPubInfo();
     double process_runtime = 0.0;
-    string dir = argv[1];
-
+    string dir = IMAGE_PATH;
 
     ros::init(argc, argv, "image_folder_publisher");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     image_transport::Publisher pub = it.advertise("/camera/image", 1);
-    printPubInfo(opts);
-
+//    printPubInfo(opts);
 
     double diff;
     double real_dt;
-    int counter=1;
+    int counter = 1;
     ros::Time current_time = ros::Time::now();
-    if( num_start < files.size())
-    {
+    if (num_start < files.size()) {
 
-        if (num_start <= num_image )
-        {
-            int i = num_start ;
-            ros::Time time=ros::Time::now();
-            while (ros::ok() && i < num_start + num_image  )
-            {
+        if (num_start <= num_image) {
+            int i = num_start;
+            ros::Time time = ros::Time::now();
+            while (ros::ok() && i < num_start + num_image) {
                 stop();
                 real_dt = dt - process_runtime;
                 diff = ros::Time::now().toSec() - time.toSec();
-                if (real_dt>diff )
-                {
+                if (real_dt > diff) {
                     continue;
                 }
 
 
                 ros::Time pre_time = ros::Time::now();
                 std::string imgPath = files[i];
-                string timestr = imgPath.substr(dir.size()+1,dir.find(Figure_Type)-Figure_Type.size());
+                string timestr = imgPath.substr(dir.size() + 1, dir.find(Figure_Type) - Figure_Type.size());
                 double timed;
                 std::stringstream sstr(timestr);
                 sstr >> timed;
@@ -308,8 +278,7 @@ int main(int argc, char **argv)
 
 
                 Mat image = cv::imread(imgPath, CV_LOAD_IMAGE_COLOR);
-                if (!image.empty())
-                {
+                if (!image.empty()) {
                     sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
                     msg->header.stamp = times;
                     pub.publish(msg);
@@ -317,31 +286,41 @@ int main(int argc, char **argv)
                     printf("\r[RUNNING]  Frame Time: %13.6f    \r", times.toSec());
                     fflush(stdout);
                     counter++;
-                    process_runtime = ros::Time::now().toSec() - pre_time.toSec() ;
-                    time= ros::Time::now();
+                    process_runtime = ros::Time::now().toSec() - pre_time.toSec();
+                    time = ros::Time::now();
 
-                } else
-                {
-                    std::cout << "Empty figure"<<endl;
+                } else {
+                    std::cout << "Empty figure" << endl;
                     continue;
                 }
-                i=i+1;
-                if(i == num_start + num_image && opts.loop)
-                {
+                i = i + 1;
+                if (i == num_start + num_image && opts.loop) {
                     i = num_start;
-                    cout<<"\n One more time!"<<endl;
+                    cout << "\n One more time!" << endl;
 
                 }
 
             }
 
-        }else throw std::out_of_range ("Out of range of file size");
+        } else throw std::out_of_range("Out of range of file size");
 
-    }
-    else throw std::out_of_range ("Out of range of file size");
+    } else throw std::out_of_range("Out of range of file size");
 
     ros::shutdown();
-    std::cout << "Publish Done!"<<endl;
+    std::cout << "Image Folder Publish Done!" << endl;
+}
+
+
+int main(int argc, char **argv)
+{
+//    /media/hitcm/9359-D81D/loop_close_data_office_v0/image
+//    /home/hitcm/Downloads/loop_close_data_office_v0/image
+    PublishIamge publishIamge;
+    readParameters();
+    cout<<IMAGE_PATH<<" CEHCK"<<endl;
+    datatrans::PubOptions opts;
+    opts = parseOptions(argc, argv);
+    publishIamge.pubImage(opts,argc, argv);
     return 0;
 }
 
