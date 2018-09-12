@@ -50,12 +50,12 @@ void PubOptions::check() {
            throw ros::Exception("Out of the range of total duration");
        if ( time < 0)
            throw ros::Exception("Invalid start time, must be >= 0.0");
-       std::cout<< "Check Done!"<<std::endl;
+       std::cout<< "------------------Check Done!------------------"<<std::endl;
 }
 
 void PubOptions::printPubInfo()
 {
-    cout<< "Operation info: "<< endl;
+    cout<< "------------------Operation info------------------"<< endl;
     if(has_pub_frequency)
     {
         cout<<"it has pub frequency"<<endl;
@@ -80,7 +80,7 @@ void PubOptions::printPubInfo()
         cout << "Only loop once! "<<endl;
     }
     cout<<"Image Type: "<<figure_type<<endl;
-    cout<< "End operation info!"<< endl;
+    cout<< "------------------End print info!------------------"<< endl;
     cout<< endl;
 
 }

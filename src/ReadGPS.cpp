@@ -5,18 +5,14 @@
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
+
 //directory
 #include <DUtils/DUtils.h>
 #include <DUtilsCV/DUtilsCV.h>
 #include <DVision/DVision.h>
-
 #include <iostream>
 #include <string>
 #include <vector>
-//directory
-#include <DUtils/DUtils.h>
-#include <DUtilsCV/DUtilsCV.h>
-#include <DVision/DVision.h>
 
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -25,49 +21,47 @@
 #include <std_msgs/Int32.h>
 #include <std_msgs/String.h>
 #include <nav_msgs/Odometry.h>
-#include <sensor_msgs/NavSatFix.h>
 #include <tf/transform_broadcaster.h>
+#include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/Imu.h>
+
 #include <boost/foreach.hpp>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <locale>
 #include <iomanip>
-#include <sensor_msgs/LaserScan.h>
-#include "boost/program_options.hpp"
-#include "params.h"
-#include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
+#include <cstdlib>
+
 #include <sstream>
 #include <chrono>
 #include <stdio.h>
 #include <time.h>
-//#include <pthread.h>
 #include <thread>
-#include "boost/date_time/posix_time/posix_time.hpp"
+#include <mutex>
+#include <condition_variable>
+
+#include <boost/program_options.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
+
+#include "params.h"
 #include "PubOperations.h"
 #include "Image_folder_publisher.h"
-#include <cstdlib>
-#define C_TEXT( text ) ((char*)std::string( text ).c_str())
+
+
 using namespace std;
 using namespace cv;
 using namespace boost::posix_time;
 namespace po = boost::program_options;
-const string Figure_Type=".png";
-
-vector<string> files;
+bool pause_process = false;
+std::condition_variable m_condVar;
+vector<string> imagefiles;
 vector<ros::Time> timelist;
-
-
-//
-//struct thread_data {
-//    int  thread_id;
-//    datatrans::PubOptions opt;
-////    int argc;
-////    char **argv;
-////    thread_data();
-//};
-
+vector<string> gpsfiles;
 
 datatrans::PubOptions parseOptions(int argc, char** argv)  {
 
@@ -177,22 +171,18 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
     }
 
 //    std::string str;
-    const char * c = IMAGE_PATH.c_str();
-    const string figdir = Figure_Type;
+    const string figdir =  opts.figure_type;
     const string dir = IMAGE_PATH;
 
-    files = DUtils::FileFunctions::Dir(IMAGE_PATH.c_str(), Figure_Type.c_str(), true);
-//    std::cout<< "files.si
-//
-// ze(): "<<files.size()<<std::endl;
+    imagefiles = DUtils::FileFunctions::Dir(IMAGE_PATH.c_str(), opts.figure_type.c_str(), true);
 
     ros::Duration real_duration;
-    if(files.size()>=0)
+    if(imagefiles.size()>=0)
     {
-        std::string start = files[0];
-        std::string end = files[files.size()-1];
-        string time_start = start.substr(dir.size()+1,dir.find(Figure_Type)-Figure_Type.size());
-        string time_end = end.substr(dir.size()+1,dir.find(Figure_Type)-Figure_Type.size());
+        std::string start = imagefiles[0];
+        std::string end = imagefiles[imagefiles.size()-1];
+        string time_start = start.substr(dir.size()+1,dir.find( opts.figure_type.c_str())- opts.figure_type.size());
+        string time_end = end.substr(dir.size()+1,dir.find( opts.figure_type.c_str())- opts.figure_type.size());
         double time_s, time_e;
         std::stringstream sst1(time_start);
         std::stringstream sst2(time_end);
@@ -206,7 +196,7 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
         cout<<"total duration: "<<opts.total_duration.toSec()<<endl;
 
     }
-    opts.frames_num = files.size();
+    opts.frames_num = imagefiles.size();
 
 //    const int frequency =  opts.pub_frequency;
     if (opts.has_time)
@@ -242,12 +232,12 @@ void readTimeStamp()
         std::tm tmTime = boost::posix_time::to_tm(boost::posix_time::time_from_string(line));
         time_t timer=mktime(&tmTime);
         ros::Time test1 = ros::Time(double(timer));
-        test1.nsec=double(atof(mcro_sec.c_str()));
+        test1.nsec=atof(mcro_sec.c_str());
 //        cout<<"Each time: "<<test1.toSec()<<endl;
         timelist.push_back(test1);
 
     }
-    cout<<" Read Time stamp down!"<<endl<<endl;
+    cout<<"------------------Read Time stamp Done!------------------"<<endl;
 }
 
 
@@ -265,14 +255,16 @@ bool kbhit()
 
     tcsetattr(0, TCSANOW, &term);
 
+
     return byteswaiting > 0;
 }
 
 void stop()
 {
-    if( kbhit() ) {
+    if(  kbhit()) {
         char ch;
         scanf("%c", &ch);
+        pause_process=true;
         switch (ch) {
             case 32:
                 cout << endl;
@@ -286,6 +278,7 @@ void stop()
                         scanf("%c", &ss);
                         if(ss == 32)
                         {
+                            pause_process= false;
                             break;
                         }
                     }
@@ -297,36 +290,33 @@ void stop()
 }
 
 
-void pubGPS(datatrans::PubOptions opts, int argc, char** argv) {
-//    datatrans::PubOptions *my_data;
-//    my_data = (datatrans::PubOptions *) threadarg;
-    cout << "------------------Pub GPS--------------------- " << endl;
-    cout << "------------------Pub GPS--------------------- " << endl;
+void pubGPSImu(datatrans::PubOptions opts, int argc, char** argv) {
 
-    opts.printPubInfo();
+    cout << "------------------Pub GPS and Imu--------------------- " << endl;
+
 
     string dir = GPS_PATH;
     int num_start = opts.start_frame_id;
     int num_image = opts.num_pub_frames;
-
+    gpsfiles = DUtils::FileFunctions::Dir(GPS_PATH.c_str(), ".txt", true);
     const double dt = 1 / float(opts.pub_frequency);
 
-
-    cout << "check 1" << endl;
     ros::init(argc, argv, "GPS_publisher");
     ros::NodeHandle n;
+    ros::init(argc, argv, "Imu_publisher");
+    ros::NodeHandle nh;
     ros::Publisher fix_pub = n.advertise<sensor_msgs::NavSatFix>("/gps", 1);
-    cout << "check 2" << endl;
+    ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>("/imu", 1);
 
     double process_runtime = 0.0;
     double diff;
     double real_dt;
     int i = 0;
     ros::Time current_time = ros::Time::now();
-    if (num_start < files.size()) {
+    if (num_start < gpsfiles.size()) {
 
         if (num_start <= num_image) {
-            int i = num_start;
+            i = num_start;
             ros::Time time = ros::Time::now();
             while (ros::ok() && i < num_start + num_image) {
                 stop();
@@ -346,31 +336,51 @@ void pubGPS(datatrans::PubOptions opts, int argc, char** argv) {
 
 
                 //        cout<<"check 5"<<endl;
-                ifstream input_stream(files[i]);
-                if (!input_stream) cerr << "Can't open input file!";
 
+
+                ifstream input_stream2(gpsfiles[i]);
+                if (!input_stream2) cerr << "Can't open input file!";
                 string line;
                 vector<string> filedata;
-                while (getline(input_stream, line, ' ')) {
+                while(getline(input_stream2,line,' ')) {
                     filedata.push_back(line);
                 }
                 sensor_msgs::NavSatFixPtr fix(new sensor_msgs::NavSatFix);
+                sensor_msgs::Imu imu;
+
+                //imu 12-14
+                imu.header.stamp=timelist[i];
+                imu.linear_acceleration.x=atof(filedata[11].c_str());
+                imu.linear_acceleration.y=atof(filedata[12].c_str());
+                imu.linear_acceleration.z=atof(filedata[13].c_str());
+                //9-11
+                imu.angular_velocity.x=atof(filedata[8].c_str());
+                imu.angular_velocity.y=atof(filedata[9].c_str());
+                imu.angular_velocity.z=atof(filedata[10].c_str());
+                imu_pub.publish(imu);
+
+
+
+
+
+                //navstafix
+                fix->header.stamp = timelist[i];
                 fix->latitude = (float) atof(filedata[0].c_str());
                 fix->longitude = (float) atof(filedata[1].c_str());
                 fix->altitude = (float) atof(filedata[2].c_str());
-                fix->header.stamp = timelist[i];
+                fix->status.status = atof(filedata[25].c_str());
                 fix_pub.publish(fix);
                 i++;
                 process_runtime = ros::Time::now().toSec() - pre_time.toSec();
                 time = ros::Time::now();
-                printf("\r[RUNNING]  Frame Time: %13.6f    \r", fix->header.stamp.toSec());
-                fflush(stdout);
+//                printf("\r[RUNNING]  Frame Time: %13.6f    \r", fix->header.stamp.toSec());
+//                fflush(stdout);
             }
 
 
 
         }
-        cout << "------------------Pub GPS DONE---------------------"<<endl<<endl;
+        cout << "------------------Pub GPS and Imu DONE---------------------"<<endl;
         ros::shutdown();
         pthread_exit(NULL);
     }
@@ -381,30 +391,32 @@ void pubGPS(datatrans::PubOptions opts, int argc, char** argv) {
 
 void pubImage(datatrans::PubOptions opts, int argc, char **argv) {
     cout << "------------------Pub IMAGE---------------------" <<endl;
-    cout << "------------------Pub IMAGE---------------------"   <<endl;
+
     const double dt = 1 / float(opts.pub_frequency);
     int num_start = opts.start_frame_id;
     int num_image = opts.num_pub_frames;
 
     opts.check();
-    opts.printPubInfo();
     double process_runtime = 0.0;
     string dir = IMAGE_PATH;
     ros::init(argc, argv, "image_folder_publisher");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     image_transport::Publisher pub = it.advertise("/camera/image", 1);
-//    printPubInfo(opts);
+
     double diff;
     double real_dt;
     ros::Time current_time = ros::Time::now();
-    if (num_start < files.size()) {
+    if (num_start < imagefiles.size()) {
 
         if (num_start <= num_image) {
             int i = num_start;
             ros::Time time = ros::Time::now();
             while (ros::ok() && i < num_start + num_image) {
-                stop();
+                while(pause_process)
+                {
+//                    wait for start the process
+                }
 
                 diff = ros::Time::now().toSec() - time.toSec();
                 if (real_dt > diff) {
@@ -419,7 +431,7 @@ void pubImage(datatrans::PubOptions opts, int argc, char **argv) {
                 }
 
                 ros::Time pre_time = ros::Time::now();
-                std::string imgPath = files[i];
+                std::string imgPath = imagefiles[i];
 
 
                 Mat image = cv::imread(imgPath, CV_LOAD_IMAGE_COLOR);
@@ -428,8 +440,8 @@ void pubImage(datatrans::PubOptions opts, int argc, char **argv) {
                     msg->header.stamp = timelist[i];
                     pub.publish(msg);
 //                    ros::Duration time_since_rate = std::max(ros::Time::now() - last_rate_control_, ros::Duration(0));
-//                    printf("\r[RUNNING]  Frame Time: %13.6f    \r", timelist[i].toSec());
-//                    fflush(stdout);
+                    printf("\r[RUNNING]  Frame Time: %13.6f    \r", timelist[i].toSec());
+                    fflush(stdout);
                     process_runtime = ros::Time::now().toSec() - pre_time.toSec();
                     time = ros::Time::now();
 
@@ -441,7 +453,6 @@ void pubImage(datatrans::PubOptions opts, int argc, char **argv) {
                 if (i == num_start + num_image && opts.loop) {
                     i = num_start;
                     cout << "\n One more time!" << endl;
-
                 }
 
             }
@@ -449,71 +460,133 @@ void pubImage(datatrans::PubOptions opts, int argc, char **argv) {
         } else throw std::out_of_range("Out of range of file size");
 
     } else throw std::out_of_range("Out of range of file size");
-    cout << "------------------Pub IMAGE DONE---------------------"<<endl<<endl;
+    cout << "------------------Pub IMAGE DONE---------------------"<<endl;
     ros::shutdown();
     pthread_exit(NULL);
 
-    std::cout << "Image Folder Publish Done!" << endl;
+
 }
 
 
 
 int main(int argc, char **argv) {
-//    pubGPS(argc, argv);
+
     cout <<"--------Creating first thread----------" << endl;
+
     readParameters();
     readTimeStamp();
-//    pthread_t threads[1];
-//    struct thread_data td[1];
-    int rc;
-    int i=0;
-
     datatrans::PubOptions opts = parseOptions(argc, argv);
-    cout << opts.frames_num  << endl;
-    opts.printPubInfo();
-//
-    PublishIamge publishIamge;
-//    readParameters();
-    cout<<IMAGE_PATH<<" CEHCK"<<endl;
+    thread first(pubGPSImu,opts,argc, argv);
+    thread second( pubImage,opts,argc, argv);
 
-    std::thread first(pubGPS,opts,argc, argv);     // spawn new thread that calls foo()
-    std::thread second( pubImage,opts,argc, argv);  // spawn new thread that calls bar(0)
-//    std::thread myThread(&MyClass::handler,this);
-    std::cout << "main, foo and bar now execute concurrently...\n";
-
-    first.join();                // pauses until first finishes
-    second.join();               // pauses until second finishes
-
-    std::cout << "foo and bar completed.\n";
-
-
-//    td[i].opt = opts ;
-//    td[i].argc =argc;
-//    td[i].argv = argv;
-//    rc = pthread_create(&threads[i], NULL, pubGPS, (void *)&opts);
-
-    cout <<"pthread has created!!" << endl;
-
-
-
-
+    first.join();
+    second.join();
+    cout << "Publish images and gps completed.\n";
 
 }
 
-///*
-// * header:
-//  seq: 349
-//  stamp:
-//    secs: 1509690988
-//    nsecs: 639245963
-//  frame_id: base_gps
-//status:
-//  status: 1
-//  service: 0
-//latitude: 31.2200097
-//longitude: 121.623840633
-//altitude: 0.0
-//position_covariance: [5.843113289123252e-11, 9.69503845685456e-12, 2.089755419271605e-07, 9.69503845685456e-12, 9.683901643854834e-12, 1.1537530942331888e-06, 2.089755419271605e-07, 1.1537530942331888e-06, 0.982491041008761]
-//position_covariance_type: 3
-//
-// */
+/*
+header:
+seq: 479
+stamp:
+secs: 1509691001
+nsecs: 640277377
+frame_id: base_gps
+        status:
+status: 2
+service: 0
+latitude: 31.2199717833
+longitude: 121.623832967
+altitude: 4.14143644775
+position_covariance: [1.580053171970545e-10, -1.5891390421866075e-10, -4.373672608911559e-06, -1.5891390421866075e-10, 4.6544350044590916e-10, 1.3301550902628158e-06, -4.373672608911559e-06, 1.3301550902628158e-06, 3.030800897006422]
+position_covariance_type: 3
+*/
+
+
+//linear_acceleration:
+//x: -0.349102527369
+//y: -10.1478844257
+//z: 0.746027318761
+//linear_acceleration_covariance: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+//---//---//---/imu0
+/*
+ *
+ *
+ *
+lat:   latitude of the oxts-unit (deg)
+lon:   longitude of the oxts-unit (deg)
+alt:   altitude of the oxts-unit (m)
+
+49.011212804408
+8.4228850417969
+112.83492279053
+
+roll:  roll angle (rad),    0 = level, positive = left side up,      range: -pi   .. +pi
+pitch: pitch angle (rad),   0 = level, positive = front down,        range: -pi/2 .. +pi/2
+yaw:   heading (rad),       0 = east,  positive = counter clockwise, range: -pi   .. +pi
+0.022447
+1e-05
+-1.2219096732051
+
+vn:    velocity towards north (m/s)
+ve:    velocity towards east (m/s)
+vf:    forward velocity, i.e. parallel to earth-surface (m/s)
+vl:    leftward velocity, i.e. parallel to earth-surface (m/s)
+vu:    upward velocity, i.e. perpendicular to earth-surface (m/s)
+-3.3256321640686
+1.1384311814592
+3.5147680214713
+0.037625160413037
+-0.03878884255623
+
+
+ax:    acceleration in x, i.e. in direction of vehicle front (m/s^2)
+ay:    acceleration in y, i.e. in direction of vehicle left (m/s^2)
+ay:    acceleration in z, i.e. in direction of vehicle top (m/s^2)
+af:    forward acceleration (m/s^2)
+al:    leftward acceleration (m/s^2)
+au:    upward acceleration (m/s^2)
+-0.29437452763793
+0.037166856911681
+9.9957015129717
+-0.30581030960531
+-0.19635662515203
+9.9942128010936
+
+wx:    angular rate around x (rad/s)
+wy:    angular rate around y (rad/s)
+wz:    angular rate around z (rad/s)
+wf:    angular rate around forward axis (rad/s)
+wl:    angular rate around leftward axis (rad/s)
+wu:    angular rate around upward axis (rad/s)
+-0.017332142869546
+0.024792163815438
+0.14511808479348
+-0.017498934149631
+0.021393359392165
+0.14563031426063
+
+
+pos_accuracy:  velocity accuracy (north/east in m)
+vel_accuracy:  velocity accuracy (north/east in m/s)
+0.49229361157748
+0.068883960397178
+
+navstat:       navigation status (see navstat_to_string)
+numsats:       number of satellites tracked by primary GPS receiver
+posmode:       position mode of primary GPS receiver (see gps_mode_to_string)
+velmode:       velocity mode of primary GPS receiver (see gps_mode_to_string)
+orimode:       orientation mode of primary GPS receiver (see gps_mode_to_string)
+ 4
+10
+4
+4
+0
+
+ */
+
+
+
+
+
+

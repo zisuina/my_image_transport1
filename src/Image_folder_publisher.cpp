@@ -35,7 +35,7 @@ using namespace cv;
 
 namespace po = boost::program_options;
 vector<string> files;
-const string Figure_Type=".png";
+//const string Figure_Type=".png";
 //TODO   Figure_Type
 
 
@@ -47,7 +47,7 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
 
     desc.add_options()
             ("help,h", "produce help message")
-            ("prefix,p", po::value<std::string>()->default_value(""), "prefixes all output topics in replay")
+            ("figure", po::value<std::string>()->default_value(".fig"), "prefixes all output topics in replay")
             ("quiet,q", "suppress console output")
             ("immediate,i", "play back all messages without waiting")
             ("pause", "start in paused mode")
@@ -55,7 +55,7 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
             ("clock", "publish the clock time")
             ("hz", po::value<float>()->default_value(100.0f), "use a frequency of HZ when publishing clock time")
             ("delay,d", po::value<float>()->default_value(0.2f), "sleep SEC seconds after every advertise call (to allow subscribers to connect)")
-            ("rate,r", po::value<float>()->default_value(100.0f), "multiply the publish rate by FACTOR")
+            ("rate,r",  po::value<float>()->default_value(20.0f),   "multiply the publish rate by FACTOR")
             ("start,s", po::value<float>()->default_value(0.0f), "start SEC seconds into the bag files")
             ("duration,u", po::value<float>(), "play only SEC seconds from the bag files")
             ("skip-empty", po::value<float>(), "skip regions in the bag with no messages for more than SEC seconds")
@@ -65,13 +65,13 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
             ("topics", po::value< std::vector<std::string> >()->multitoken(), "topics to play back")
             ("pause-topics", po::value< std::vector<std::string> >()->multitoken(), "topics to pause playback on")
             ("bags", po::value< std::vector<std::string> >(), "bag files to play back from")
-          ;
+            ;
 
     po::positional_options_description p;
     p.add("bags", -1);
 
     po::variables_map vm;
-//    std::cout<< "Check Done1!"<<std::endl;
+    std::cout<< "Check Done1!"<<std::endl;
     try
     {
         po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
@@ -89,9 +89,9 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
         exit(0);
     }
 
-    opts.has_pub_frequency= false;
-//    if (vm.count("prefix"))
-//        opts.prefix = vm["prefix"].as<std::string>();
+    if (vm.count("figure"))
+        opts.figure_type = vm["figure"].as<std::string>();
+    std::cout << "opts.figure_type: "<<opts.figure_type << std::endl;
     if (vm.count("quiet"))
         opts.quiet = true;
     if (vm.count("immediate"))
@@ -103,7 +103,13 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
     if (vm.count("delay"))
         opts.advertise_sleep = ros::WallDuration(vm["delay"].as<float>());
     if (vm.count("rate"))
-        opts.pub_frequency = vm["rate"].as<float>();
+    {
+        if (vm["rate"].as<float>() !=20.0)
+        {
+            opts.pub_frequency = vm["rate"].as<float>();
+            opts.has_pub_frequency =true;
+        }
+    }
     if (vm.count("figure-type"))
         opts.figure_type = vm["figure-type"].as<string>();
 
@@ -115,7 +121,6 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
     if (vm.count("duration"))
     {
         opts.pub_duration = vm["duration"].as<float>();
-
         opts.has_duration = true;
     }
     if (vm.count("skip-empty"))
@@ -143,21 +148,19 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
             opts.pause_topics.push_back(*i);
     }
 
-    const string figdir = opts.figure_type;
-    const char * c = IMAGE_PATH.c_str();
-
+//    std::string str;
+    const string figdir =  opts.figure_type;
     const string dir = IMAGE_PATH;
-    files = DUtils::FileFunctions::Dir(c, Figure_Type.c_str(), true);
 
+    files = DUtils::FileFunctions::Dir(IMAGE_PATH.c_str(), opts.figure_type.c_str(), true);
 
     ros::Duration real_duration;
-    opts.num_pub_frames = files.size();
     if(files.size()>=0)
     {
         std::string start = files[0];
         std::string end = files[files.size()-1];
-        string time_start = start.substr(dir.size()+1,dir.find(Figure_Type)-Figure_Type.size());
-        string time_end = end.substr(dir.size()+1,dir.find(Figure_Type)-Figure_Type.size());
+        string time_start = start.substr(dir.size()+1,dir.find( opts.figure_type.c_str())- opts.figure_type.size());
+        string time_end = end.substr(dir.size()+1,dir.find( opts.figure_type.c_str())- opts.figure_type.size());
         double time_s, time_e;
         std::stringstream sst1(time_start);
         std::stringstream sst2(time_end);
@@ -168,26 +171,28 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
         ros::Time end_times = ros::Time(time_e);
         real_duration = end_times- start_times ;
         opts.total_duration = real_duration;
-        cout<<"total duration "<<opts.total_duration.toSec()<<endl;
+        cout<<"total duration: "<<opts.total_duration.toSec()<<endl;
 
     }
     opts.frames_num = files.size();
 
-    const int frequency =  opts.pub_frequency;
+//    const int frequency =  opts.pub_frequency;
     if (opts.has_time)
     {
-        opts.start_frame_id =int(opts.time/(1/float(frequency)) ) ;
+        opts.start_frame_id =int(opts.time/(1/opts.pub_frequency) ) ;
     } else{
         opts.start_frame_id = 0;
     }
 
     if (opts.has_duration)
     {
-        opts.num_pub_frames = int(opts.pub_duration / (1/float(frequency)));
+        opts.num_pub_frames = int(opts.pub_duration / (1/opts.pub_frequency));
     } else{
         opts.num_pub_frames  = opts.frames_num - opts.start_frame_id;
-        opts.pub_duration = opts.num_pub_frames /frequency;
+        opts.pub_duration = opts.num_pub_frames /opts.pub_frequency;
     }
+
+    opts.printPubInfo();
     return opts;
 }
 
@@ -270,7 +275,7 @@ void PublishIamge::pubImage(datatrans::PubOptions opts, int argc, char **argv) {
 
                 ros::Time pre_time = ros::Time::now();
                 std::string imgPath = files[i];
-                string timestr = imgPath.substr(dir.size() + 1, dir.find(Figure_Type) - Figure_Type.size());
+                string timestr = imgPath.substr(dir.size() + 1, dir.find(opts.figure_type.c_str()) - opts.figure_type.size());
                 double timed;
                 std::stringstream sstr(timestr);
                 sstr >> timed;
