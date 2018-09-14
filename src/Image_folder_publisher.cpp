@@ -36,7 +36,7 @@ using namespace cv;
 namespace po = boost::program_options;
 vector<string> files;
 //const string Figure_Type=".png";
-//TODO   Figure_Type
+
 
 
 datatrans::PubOptions parseOptions(int argc, char** argv) {
@@ -258,7 +258,7 @@ void PublishIamge::pubImage(datatrans::PubOptions opts, int argc, char **argv) {
     image_transport::ImageTransport it(nh);
     image_transport::Publisher pub = it.advertise("/camera/image", 1);
 //    printPubInfo(opts);
-    namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
+//    namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
     double diff;
     double real_dt;

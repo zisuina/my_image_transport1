@@ -15,7 +15,7 @@ catkin_package()
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 #set(OpenCV_DIR "/usr/local/opencv2/share/OpenCV")
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3 REQUIRED)
 message("OpenCV Version ${OpenCV_LIBS}")
 
 include_directories(include ${OpenCV_INCLUDE_DIRS})
@@ -44,7 +44,7 @@ target_link_libraries(Image_folder_publisher ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #add_executable(Image_folder_subscriber src/Image_folder_subscriber.cpp )
 #target_link_libraries(Image_folder_subscriber ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(ReadBag src/ReadBag.cpp)
+add_executable(ReadBag src/params.cpp src/ReadBag.cpp)
 target_link_libraries(ReadBag ${catkin_LIBRARIES} ${OpenCV_LIBS} ${rosbag_LIBRARIES}  )
 # System dependencies are found with CMake's conventions
 add_executable(ReadGPS src/ReadGPS.cpp src/params.cpp src/PubOperations.cpp )

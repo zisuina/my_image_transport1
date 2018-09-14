@@ -7,7 +7,7 @@ gps_path: "/home/hitcm/Downloads/2011_09_26/2011_09_26_drive_0005_sync/oxts/data
 image_path: "/home/hitcm/Downloads/2011_09_26/2011_09_26_drive_0005_sync/image_00/data"
 #voc_file: "/media/hitcm/Elements/vSLAM/data/dbow/surf64_k10L6.voc.gz"
 gps_timestamp_path: "/home/hitcm/Downloads/2011_09_26/2011_09_26_drive_0005_sync/oxts/timestamps.txt"
-bag_path: "/home/hitcm/Downloads/riverside_2017-11-03-14-36-00.bag"
+bag_path: "/home/hitcm/catkin_ws/bag/2018-05-22-01-25-50_DT.bag"
 video_path: "/home/hitcm/Downloads/111.mp4"
 
 

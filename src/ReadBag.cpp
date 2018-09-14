@@ -18,6 +18,8 @@
 #include <DUtils/DUtils.h>
 #include <DUtilsCV/DUtilsCV.h>
 #include <DVision/DVision.h>
+#include "params.h"
+#include "PubOperations.h"
 using namespace std;
 namespace po = boost::program_options;
 
@@ -124,7 +126,9 @@ rosbag::PlayerOptions parseOptions(int argc, char** argv) {
     if (vm.count("bags"))
     {
         std::vector<std::string> bags = vm["bags"].as< std::vector<std::string> >();
+
         for (std::vector<std::string>::iterator i = bags.begin();
+
              i != bags.end();
              i++)
             opts.bags.push_back(*i);
@@ -142,14 +146,15 @@ rosbag::PlayerOptions parseOptions(int argc, char** argv) {
 
 int main(int argc, char** argv) {
 
+    readParameters();
 
     ros::init(argc, argv, "rosbag_publisher");
     ros::NodeHandle n;
-    ros::Publisher odom_pub = n.advertise<nav_msgs::Odometry>("/odom", 50);
 
     //Read bag from argv
     rosbag::Bag bag;
-    bag.open(argv[1], rosbag::bagmode::Read);
+    cout<<BAG_PATH<<endl;
+    bag.open(BAG_PATH.c_str(), rosbag::bagmode::Read);
     rosbag::View view(bag);
 
     ros::init(argc, argv, "play", ros::init_options::AnonymousName);

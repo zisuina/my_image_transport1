@@ -3,9 +3,11 @@
 //
 
 #include "params.h"
+#include <ros/ros.h>
+#include <opencv2/opencv.hpp>
 
 using namespace std;
-const char *CONFIG_FILE = "/home/hitcm/catkin_ws/src/my_image_transport1/src/pub_path.yaml";
+const string CONFIG_FILE = "/home/hitcm/catkin_ws/src/my_image_transport1/src/pub_path.yaml";
 
 std::string GPS_PATH;
 std::string IMAGE_PATH;
@@ -16,7 +18,7 @@ std::string VIDEO_PATH;
 //functions
 void readParameters()
 {
-    cv::FileStorage fsSettings(CONFIG_FILE, cv::FileStorage::READ);
+    cv::FileStorage fsSettings(CONFIG_FILE.c_str(), cv::FileStorage::READ);
 
     std::cout << "==================Parameters reading================== " << std::endl;
     if(!fsSettings.isOpened())

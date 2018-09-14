@@ -1,0 +1,12 @@
+
+
+
+Publish image folder:
+rosrun my_publish_transport Image_folder_publisher
+
+Publish kitti (image, imu and gps):
+rosrun my_publish_transport ReadGPS
+
+Publish bag:
+rosrun my_publish_transport ReadBag [bag path]
+
