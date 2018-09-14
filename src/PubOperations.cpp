@@ -13,7 +13,6 @@ namespace datatrans {
     quiet(false),
     start_paused(false),
     at_once(false),
-//    todo figure type
     figure_type(".fig"),
     pub_frequency(20.0),
     has_pub_frequency(false),
@@ -24,10 +23,8 @@ namespace datatrans {
     loop(false),
     time(0.0f),
     has_duration(false),
-
     pub_duration(0.0f),
     keep_alive(false),
-
     skip_empty(ros::DURATION_MAX),
     frames_num(0),
     start_frame_id(0),
@@ -70,9 +67,6 @@ void PubOptions::printPubInfo()
     cout << "num_pub_frames: "<< num_pub_frames<< endl;
     cout << "start_frame_id: "<< start_frame_id<< endl;
 
-//    cout << "start_frame_id: "<< start_frame_id<< endl;
-//    cout << "start_frame_id: "<< start_frame_id<< endl;
-//    cout << "start_frame_id: "<< start_frame_id<< endl;
     if(loop )
     {
         cout << "Will loop your publish: "<<endl;

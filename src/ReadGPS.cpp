@@ -69,24 +69,24 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("help,h", "produce help message")
-            ("figure", po::value<std::string>()->default_value(".fig"), "prefixes all output topics in replay")
-            ("quiet,q", "suppress console output")
-            ("immediate,i", "play back all messages without waiting")
-            ("pause", "start in paused mode")
-            ("queue", po::value<int>()->default_value(100), "use an outgoing queue of size SIZE")
-            ("clock", "publish the clock time")
-            ("hz", po::value<float>()->default_value(100.0f), "use a frequency of HZ when publishing clock time")
-            ("delay,d", po::value<float>()->default_value(0.2f), "sleep SEC seconds after every advertise call (to allow subscribers to connect)")
-            ("rate,r",  po::value<float>()->default_value(20.0f),   "multiply the publish rate by FACTOR")
+            ("figure", po::value<std::string>()->default_value(".fig"), "Figure type: default is .fig. e.g. .png")
+//            ("quiet,q", "suppress console output")
+//            ("immediate,i", "play back all messages without waiting")
+//            ("pause", "start in paused mode")
+//            ("queue", po::value<int>()->default_value(100), "use an outgoing queue of size SIZE")
+//            ("clock", "publish the clock time")
+//            ("hz", po::value<float>()->default_value(100.0f), "use a frequency of HZ when publishing clock time")
+//            ("delay,d", po::value<float>()->default_value(0.2f), "sleep SEC seconds after every advertise call (to allow subscribers to connect)")
+            ("rate,r",  po::value<float>()->default_value(10.0f),   "multiply the publish rate by FACTOR")
             ("start,s", po::value<float>()->default_value(0.0f), "start SEC seconds into the bag files")
             ("duration,u", po::value<float>(), "play only SEC seconds from the bag files")
-            ("skip-empty", po::value<float>(), "skip regions in the bag with no messages for more than SEC seconds")
+//            ("skip-empty", po::value<float>(), "skip regions in the bag with no messages for more than SEC seconds")
             ("loop,l", "loop playback")
-            ("keep-alive,k", "keep alive past end of bag (useful for publishing latched topics)")
-            ("try-future-version", "still try to open a bag file, even if the version is not known to the player")
-            ("topics", po::value< std::vector<std::string> >()->multitoken(), "topics to play back")
-            ("pause-topics", po::value< std::vector<std::string> >()->multitoken(), "topics to pause playback on")
-            ("bags", po::value< std::vector<std::string> >(), "bag files to play back from")
+//            ("keep-alive,k", "keep alive past end of bag (useful for publishing latched topics)")
+//            ("try-future-version", "still try to open a bag file, even if the version is not known to the player")
+//            ("topics", po::value< std::vector<std::string> >()->multitoken(), "topics to play back")
+//            ("pause-topics", po::value< std::vector<std::string> >()->multitoken(), "topics to pause playback on")
+//            ("bags", po::value< std::vector<std::string> >(), "bag files to play back from")
             ;
 
     po::positional_options_description p;
@@ -114,26 +114,24 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
     if (vm.count("figure"))
         opts.figure_type = vm["figure"].as<std::string>();
     std::cout << "opts.figure_type: "<<opts.figure_type << std::endl;
-    if (vm.count("quiet"))
-        opts.quiet = true;
-    if (vm.count("immediate"))
-        opts.at_once = true;
-    if (vm.count("pause"))
-        opts.start_paused = true;
-    if (vm.count("queue"))
-        opts.queue_size = vm["queue"].as<int>();
-    if (vm.count("delay"))
-        opts.advertise_sleep = ros::WallDuration(vm["delay"].as<float>());
+//    if (vm.count("quiet"))
+//        opts.quiet = true;
+//    if (vm.count("immediate"))
+//        opts.at_once = true;
+//    if (vm.count("pause"))
+//        opts.start_paused = true;
+//    if (vm.count("queue"))
+//        opts.queue_size = vm["queue"].as<int>();
+//    if (vm.count("delay"))
+//        opts.advertise_sleep = ros::WallDuration(vm["delay"].as<float>());
     if (vm.count("rate"))
     {
-        if (vm["rate"].as<float>() !=20.0)
+        if (vm["rate"].as<float>() !=10.0)
         {
             opts.pub_frequency = vm["rate"].as<float>();
             opts.has_pub_frequency =true;
         }
     }
-    if (vm.count("figure-type"))
-        opts.figure_type = vm["figure-type"].as<string>();
 
     if (vm.count("start"))
     {
@@ -145,12 +143,12 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
         opts.pub_duration = vm["duration"].as<float>();
         opts.has_duration = true;
     }
-    if (vm.count("skip-empty"))
-        opts.skip_empty = ros::Duration(vm["skip-empty"].as<float>());
+//    if (vm.count("skip-empty"))
+//        opts.skip_empty = ros::Duration(vm["skip-empty"].as<float>());
     if (vm.count("loop"))
         opts.loop = true;
-    if (vm.count("keep-alive"))
-        opts.keep_alive = true;
+//    if (vm.count("keep-alive"))
+//        opts.keep_alive = true;
 
     if (vm.count("topics"))
     {
@@ -173,8 +171,13 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
 //    std::string str;
     const string figdir =  opts.figure_type;
     const string dir = IMAGE_PATH;
-
     imagefiles = DUtils::FileFunctions::Dir(IMAGE_PATH.c_str(), opts.figure_type.c_str(), true);
+
+
+    if (imagefiles.size()==0)
+    {
+        std::cerr << "File size is zero: : Please check image path and figure type. "<< std::endl;
+    }
 
     ros::Duration real_duration;
     if(imagefiles.size()>=0)
@@ -193,7 +196,7 @@ datatrans::PubOptions parseOptions(int argc, char** argv)  {
         ros::Time end_times = ros::Time(time_e);
         real_duration = end_times- start_times ;
         opts.total_duration = real_duration;
-        cout<<"total duration: "<<opts.total_duration.toSec()<<endl;
+//        cout<<"total duration: "<<opts.total_duration.toSec()<<endl;
 
     }
     opts.frames_num = imagefiles.size();
@@ -334,10 +337,6 @@ void pubGPSImu(datatrans::PubOptions opts, int argc, char** argv) {
 
                 ros::Time pre_time = ros::Time::now();
 
-
-                //        cout<<"check 5"<<endl;
-
-
                 ifstream input_stream2(gpsfiles[i]);
                 if (!input_stream2) cerr << "Can't open input file!";
                 string line;
@@ -349,6 +348,11 @@ void pubGPSImu(datatrans::PubOptions opts, int argc, char** argv) {
                 sensor_msgs::Imu imu;
 
                 //imu 12-14
+                double roll = atof(filedata[3].c_str());
+                double pitch = atof(filedata[4].c_str());
+                double yaw = atof(filedata[5].c_str());
+
+
                 imu.header.stamp=timelist[i];
                 imu.linear_acceleration.x=atof(filedata[11].c_str());
                 imu.linear_acceleration.y=atof(filedata[12].c_str());
@@ -357,11 +361,12 @@ void pubGPSImu(datatrans::PubOptions opts, int argc, char** argv) {
                 imu.angular_velocity.x=atof(filedata[8].c_str());
                 imu.angular_velocity.y=atof(filedata[9].c_str());
                 imu.angular_velocity.z=atof(filedata[10].c_str());
+                imu.orientation.w = cos(roll/2)*cos(yaw/2)*cos(pitch/2)+sin(roll/2)*sin(yaw/2)*sin(pitch/2);
+                imu.orientation.x= sin(roll/2)*cos(yaw/2)*cos(pitch/2)-cos(roll/2)*sin(yaw/2)*sin(pitch/2);
+                imu.orientation.y= cos(roll/2)*sin(yaw/2)*cos(pitch/2)+sin(roll/2)*cos(yaw/2)*sin(pitch/2);
+                imu.orientation.z =cos(roll/2)*cos(yaw/2)*sin(pitch/2)-sin(roll/2)*sin(yaw/2)*cos(pitch/2);
                 imu_pub.publish(imu);
-
-
-
-
+//                cout<<imu.orientation.w<<" "<< imu.orientation.x << " " <<imu.orientation.y<<" "<<imu.orientation.z<<endl;
 
                 //navstafix
                 fix->header.stamp = timelist[i];
@@ -370,7 +375,13 @@ void pubGPSImu(datatrans::PubOptions opts, int argc, char** argv) {
                 fix->altitude = (float) atof(filedata[2].c_str());
                 fix->status.status = atof(filedata[25].c_str());
                 fix_pub.publish(fix);
-                i++;
+                i = i + 1;
+                if (i == num_start + num_image && opts.loop) {
+                    i = num_start;
+                    cout << "i" <<i<< endl;
+                    cout << "\n One more time!" << endl;
+
+                }
                 process_runtime = ros::Time::now().toSec() - pre_time.toSec();
                 time = ros::Time::now();
 //                printf("\r[RUNNING]  Frame Time: %13.6f    \r", fix->header.stamp.toSec());

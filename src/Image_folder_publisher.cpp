@@ -153,6 +153,10 @@ datatrans::PubOptions parseOptions(int argc, char** argv) {
     const string dir = IMAGE_PATH;
 
     files = DUtils::FileFunctions::Dir(IMAGE_PATH.c_str(), opts.figure_type.c_str(), true);
+    if (files.size()==0)
+    {
+        std::cerr << "File size is zero: Please check image path and figure type. "<< std::endl;
+    }
 
     ros::Duration real_duration;
     if(files.size()>=0)
@@ -254,6 +258,7 @@ void PublishIamge::pubImage(datatrans::PubOptions opts, int argc, char **argv) {
     image_transport::ImageTransport it(nh);
     image_transport::Publisher pub = it.advertise("/camera/image", 1);
 //    printPubInfo(opts);
+    namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display.
 
     double diff;
     double real_dt;
@@ -283,6 +288,9 @@ void PublishIamge::pubImage(datatrans::PubOptions opts, int argc, char **argv) {
 
 
                 Mat image = cv::imread(imgPath, CV_LOAD_IMAGE_COLOR);
+//                imshow( "Display window", image );                   // Show our image inside it.
+
+                waitKey(0);
                 if (!image.empty()) {
                     sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
                     msg->header.stamp = times;
