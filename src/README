@@ -1,12 +1,17 @@
 
+please take care figure type;
+default publish frequency is 20 hz;
 
+
+
+default type is .jpg. If .png please add --figure .png
 
 Publish image folder:
-rosrun my_publish_transport Image_folder_publisher
+rosrun my_publish_transport1 Image_folder_publisher
 
 Publish kitti (image, imu and gps):
-rosrun my_publish_transport ReadGPS
+rosrun my_publish_transport1 ReadGPS
 
 Publish bag:
-rosrun my_publish_transport ReadBag [bag path]
+rosrun my_publish_transport1 ReadBag [bag path]
 
